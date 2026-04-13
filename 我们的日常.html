@@ -1,0 +1,2322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的日常</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #5b7df7;
+            --primary-light: #8ea5ff;
+            --primary-dark: #4361ee;
+            --person1-color: #3b82f6;
+            --person1-light: rgba(59, 130, 246, 0.1);
+            --person2-color: #ec4899;
+            --person2-light: rgba(236, 72, 153, 0.1);
+            --person1-priority-normal: #94a3b8;
+            --person1-priority-normal-bg: rgba(148, 163, 184, 0.15);
+            --person1-priority-timed: #60a5fa;
+            --person1-priority-timed-bg: rgba(96, 165, 250, 0.15);
+            --person1-priority-important: #3b82f6;
+            --person1-priority-important-bg: rgba(59, 130, 246, 0.15);
+            --person1-priority-urgent: #2563eb;
+            --person1-priority-urgent-bg: rgba(37, 99, 235, 0.2);
+            --person2-priority-normal: #fda4af;
+            --person2-priority-normal-bg: rgba(253, 164, 175, 0.15);
+            --person2-priority-timed: #fb7185;
+            --person2-priority-timed-bg: rgba(251, 113, 133, 0.15);
+            --person2-priority-important: #f43f5e;
+            --person2-priority-important-bg: rgba(244, 63, 94, 0.15);
+            --person2-priority-urgent: #e11d48;
+            --person2-priority-urgent-bg: rgba(225, 29, 72, 0.2);
+            --priority-normal: #64748b;
+            --priority-normal-bg: rgba(100, 116, 139, 0.08);
+            --priority-timed: #f59e0b;
+            --priority-timed-bg: rgba(245, 158, 11, 0.08);
+            --priority-important: #ef4444;
+            --priority-important-bg: rgba(239, 68, 68, 0.08);
+            --priority-urgent: #dc2626;
+            --priority-urgent-bg: rgba(220, 38, 38, 0.12);
+            --danger: #ef4444;
+            --success: #10b981;
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
+            --card-bg: rgba(255, 255, 255, 0.88);
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding: 28px;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 36px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.7) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        h1 {
+            font-size: 38px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .date-display {
+            font-size: 17px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .sync-status {
+            margin-top: 14px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        .names-display {
+            margin-top: 22px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .name-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .name-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .name-tag.person1 {
+            background: linear-gradient(135deg, var(--person1-color) 0%, #1d4ed8 100%);
+        }
+
+        .name-tag.person2 {
+            background: linear-gradient(135deg, var(--person2-color) 0%, #db2777 100%);
+        }
+
+        .name-tag .avatar-emoji {
+            font-size: 20px;
+        }
+
+        .music-control {
+            margin-top: 18px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .music-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .music-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .music-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .section > .todo-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title span {
+            font-size: 24px;
+        }
+
+        .add-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            font-size: 15px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: white;
+            font-family: inherit;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(91, 125, 247, 0.1);
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px, 20px;
+            padding-right: 44px;
+        }
+
+        .person-select {
+            display: flex;
+            gap: 10px;
+        }
+
+        .person-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 15px;
+            font-weight: 600;
+            background: white;
+        }
+
+        .person-option:hover {
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .person-option.selected.person1 {
+            border-color: var(--person1-color);
+            background: var(--person1-light);
+            color: var(--person1-color);
+        }
+
+        .person-option.selected.person2 {
+            border-color: var(--person2-color);
+            background: var(--person2-light);
+            color: var(--person2-color);
+        }
+
+        .priority-select {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+        .priority-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 500;
+            background: white;
+        }
+
+        .priority-option:hover {
+            border-color: #cbd5e1;
+        }
+
+        .priority-option.selected {
+            border-width: 2px;
+        }
+
+        .priority-option.selected.normal {
+            border-color: var(--priority-normal);
+            background: var(--priority-normal-bg);
+        }
+
+        .priority-option.selected.timed {
+            border-color: var(--priority-timed);
+            background: var(--priority-timed-bg);
+        }
+
+        .priority-option.selected.important {
+            border-color: var(--priority-important);
+            background: var(--priority-important-bg);
+        }
+
+        .priority-option.selected.urgent {
+            border-color: var(--priority-urgent);
+            background: var(--priority-urgent-bg);
+        }
+
+        .priority-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .priority-dot.normal {
+            background: var(--priority-normal);
+        }
+
+        .priority-dot.timed {
+            background: var(--priority-timed);
+        }
+
+        .priority-dot.important {
+            background: var(--priority-important);
+        }
+
+        .priority-dot.urgent {
+            background: var(--priority-urgent);
+        }
+
+        .add-btn {
+            font-size: 16px;
+            font-weight: 600;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-md);
+            margin-top: 8px;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .add-btn:active {
+            transform: translateY(0);
+        }
+
+        .calendar {
+            margin-top: 28px;
+            padding-top: 28px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .calendar-nav-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .calendar-nav-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-month {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .calendar-day-name {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 8px;
+            text-transform: uppercase;
+        }
+
+        .calendar-day {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 6px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--text-primary);
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .calendar-day.today {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-weight: 700;
+        }
+
+        .calendar-day.in-range {
+            position: relative;
+        }
+
+        .calendar-day.in-range::after {
+            content: "";
+            position: absolute;
+            bottom: 4px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+        }
+
+        .calendar-day.range-start::after {
+            left: 50%;
+        }
+
+        .calendar-day.range-end::after {
+            right: 50%;
+        }
+
+        .calendar-day.selecting {
+            border: 2px dashed var(--primary);
+        }
+
+        .todo-dot {
+            display: block;
+        }
+
+        .calendar-day.has-timed-todo {
+            position: relative;
+        }
+
+        .calendar-day.has-timed-todo::after {
+            content: "";
+            position: absolute;
+            bottom: 2px;
+            left: 4px;
+            right: 4px;
+            height: 3px;
+            background: var(--priority-timed);
+            border-radius: 2px;
+        }
+
+        .calendar-day.today.has-timed-todo::after {
+            background: white;
+        }
+
+        .lunar-month,
+        .lunar-day {
+            font-size: 9px;
+            color: var(--text-secondary);
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        .calendar-day.today .lunar-month,
+        .calendar-day.today .lunar-day {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .calendar-day-festival {
+            font-size: 8px;
+            font-weight: 600;
+            color: var(--primary);
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 650px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: white;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .todo-item:hover {
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+        }
+
+        .todo-item.person1::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--person1-color);
+            border-radius: 16px 0 0 16px;
+        }
+
+        .todo-item.person2::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--person2-color);
+            border-radius: 16px 0 0 16px;
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+            font-weight: 700;
+            color: white;
+        }
+
+        .avatar.person1 {
+            background: linear-gradient(135deg, var(--person1-color) 0%, #1d4ed8 100%);
+        }
+
+        .avatar.person2 {
+            background: linear-gradient(135deg, var(--person2-color) 0%, #db2777 100%);
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+            background: white;
+        }
+
+        .checkbox:hover {
+            border-color: var(--primary);
+        }
+
+        .checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+            animation: bounce 0.4s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.25); }
+            50% { transform: scale(0.9); }
+            75% { transform: scale(1.1); }
+        }
+
+        .checkbox.checked::after {
+            content: "✓";
+            color: white;
+            font-size: 16px;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .todo-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .todo-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            word-break: break-word;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .todo-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .todo-date {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+        }
+
+        .todo-person {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .todo-person.person1 {
+            background: var(--person1-light);
+            color: var(--person1-color);
+        }
+
+        .todo-person.person2 {
+            background: var(--person2-light);
+            color: var(--person2-color);
+        }
+
+        .todo-priority {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .todo-priority.normal {
+            background: var(--priority-normal-bg);
+            color: var(--priority-normal);
+        }
+
+        .todo-priority.timed {
+            background: var(--priority-timed-bg);
+            color: var(--priority-timed);
+        }
+
+        .todo-priority.important {
+            background: var(--priority-important-bg);
+            color: var(--priority-important);
+        }
+
+        .todo-priority.urgent {
+            background: var(--priority-urgent-bg);
+            color: var(--priority-urgent);
+        }
+
+        .delete-btn {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 14px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .time-select {
+            flex: 1;
+            padding: 12px 44px 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            outline: none;
+            background: white;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px, 20px;
+        }
+
+        .time-select:hover {
+            border-color: #cbd5e1;
+        }
+
+        .time-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(91, 125, 247, 0.1);
+        }
+
+        .month-summary {
+            background: linear-gradient(135deg, rgba(91, 125, 247, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(91, 125, 247, 0.1);
+            margin-top: auto;
+        }
+
+        .generate-summary-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .generate-summary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-content {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .summary-stat {
+            background: var(--bg-gradient);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .summary-stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .summary-stat-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .todo-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .todo-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .todo-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .todo-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .view-toggle-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .view-toggle-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .date-filter-container {
+            position: relative;
+        }
+
+        .date-filter-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: white;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .date-filter-btn:hover {
+            border-color: #cbd5e1;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .mini-calendar {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-xl);
+            padding: 16px;
+            z-index: 100;
+            display: none;
+            width: 300px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mini-calendar.show {
+            display: block;
+        }
+
+        .mini-calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .mini-calendar-nav-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .mini-calendar-nav-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .mini-calendar-month {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .mini-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .mini-calendar-day-name {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 6px;
+            text-transform: uppercase;
+        }
+
+        .mini-calendar-day {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--text-primary);
+        }
+
+        .mini-calendar-day:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .mini-calendar-day.today {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-weight: 700;
+        }
+
+        .mini-calendar-day.selected {
+            background: rgba(91, 125, 247, 0.1);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .mini-calendar-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .mini-calendar-action-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 10px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mini-calendar-action-btn.all-dates {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text-secondary);
+        }
+
+        .mini-calendar-action-btn.all-dates:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💕 我们的日常</h1>
+            <div class="date-display" id="currentDate"></div>
+            <div class="sync-status" id="syncStatus">
+                <div class="sync-dot"></div>
+                <span>实时同步中</span>
+            </div>
+            <div class="names-display">
+                <div class="name-tag person1">
+                    <span class="avatar-emoji">👦</span>
+                    <span>高</span>
+                </div>
+                <span style="font-size: 20px;">❤️</span>
+                <div class="name-tag person2">
+                    <span class="avatar-emoji">👧</span>
+                    <span>郑</span>
+                </div>
+            </div>
+            <div class="music-control">
+                <button class="music-btn" id="soundBtn" onclick="toggleSound()" title="音效开关">
+                    🔇
+                </button>
+                <button class="music-btn" id="musicBtn" onclick="toggleMusic()" title="音乐开关">
+                    🎵
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- 左侧：添加待办 -->
+            <div class="section">
+                <h2 class="section-title"><span>📝</span> 添加新事项</h2>
+                <div class="add-form">
+                    <div class="input-group">
+                        <div class="person-select">
+                            <div class="person-option person1 selected" data-person="person1" onclick="selectPerson('person1')">
+                                <span>👦</span>
+                                <span>高</span>
+                            </div>
+                            <div class="person-option person2" data-person="person2" onclick="selectPerson('person2')">
+                                <span>👧</span>
+                                <span>郑</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>待办事项</label>
+                        <input type="text" id="todoInput" placeholder="要做什么呢...">
+                    </div>
+                    <div class="input-group">
+                        <label>重要程度</label>
+                        <div class="priority-select">
+                            <div class="priority-option normal selected" data-priority="normal" onclick="selectPriority('normal')">
+                                <div class="priority-dot normal"></div>
+                                <span>普通</span>
+                            </div>
+                            <div class="priority-option timed" data-priority="timed" onclick="selectPriority('timed')">
+                                <div class="priority-dot timed"></div>
+                                <span>限时</span>
+                            </div>
+                            <div class="priority-option important" data-priority="important" onclick="selectPriority('important')">
+                                <div class="priority-dot important"></div>
+                                <span>重要</span>
+                            </div>
+                            <div class="priority-option urgent" data-priority="urgent" onclick="selectPriority('urgent')">
+                                <div class="priority-dot urgent"></div>
+                                <span>非常重要</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group" id="addDateGroup">
+                        <div style="display: flex; gap: 12px; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <label>添加日期</label>
+                                <div id="selectedDateDisplay" style="min-height: 56px; font-size: 14px; font-weight: 600; color: var(--primary); padding: 12px; background: rgba(91, 125, 247, 0.08); border-radius: 12px; border: 1px solid rgba(91, 125, 247, 0.2); text-align: center; display: flex; flex-direction: column; justify-content: center;"></div>
+                            </div>
+                            <div style="flex: 1;">
+                                <label>时间</label>
+                                <select id="timeSelect" class="time-select" style="min-height: 56px; text-align: center; text-align-last: center;">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group" id="dateRangeGroup" style="display: none;">
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; gap: 12px;">
+                                <div style="flex: 1;">
+                                    <label style="font-size: 13px; margin-bottom: 6px; display: block;">开始日期</label>
+                                    <div id="startDateDisplay" style="min-height: 46px; font-size: 14px; font-weight: 600; color: var(--primary); padding: 12px; background: rgba(91, 125, 247, 0.08); border-radius: 12px; border: 1px solid rgba(91, 125, 247, 0.2); text-align: center;">
+                                        第一次点击日历选择
+                                    </div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label style="font-size: 13px; margin-bottom: 6px; display: block;">开始时间</label>
+                                    <select id="startTimeSelect" class="time-select">
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <div style="flex: 1;">
+                                    <label style="font-size: 13px; margin-bottom: 6px; display: block;">结束日期</label>
+                                    <div id="endDateDisplay" style="min-height: 46px; font-size: 14px; font-weight: 600; color: var(--primary); padding: 12px; background: rgba(91, 125, 247, 0.08); border-radius: 12px; border: 1px solid rgba(91, 125, 247, 0.2); text-align: center;">
+                                        第二次点击日历选择
+                                    </div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label style="font-size: 13px; margin-bottom: 6px; display: block;">结束时间</label>
+                                    <select id="endTimeSelect" class="time-select">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="add-btn" onclick="addTodo()">✨ 添加事项</button>
+                </div>
+
+                <!-- 日历 -->
+                <div class="calendar">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;">
+                        <h3 class="section-title" style="font-size: 18px; margin-bottom: 0;">
+                            <span></span>日历
+                        </h3>
+                        <div class="view-toggle">
+                            <button class="view-toggle-btn active" id="monthViewBtn" onclick="toggleView('month')">月</button>
+                            <button class="view-toggle-btn" id="yearViewBtn" onclick="toggleView('year')">年</button>
+                        </div>
+                    </div>
+                    <div class="calendar-header">
+                        <button class="calendar-nav-btn" onclick="prevMonth()">←</button>
+                        <span class="calendar-month" id="calendarMonth"></span>
+                        <button class="calendar-nav-btn" onclick="nextMonth()">→</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid"></div>
+                </div>
+            </div>
+
+            <!-- 右侧：待办列表 -->
+            <div class="section">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <h2 class="section-title" style="margin-bottom: 0;"><span>✅</span> 我们的待办</h2>
+                    <div class="date-filter-container">
+                        <button class="date-filter-btn" id="dateFilterBtn" onclick="toggleMiniCalendar()">
+                            <span id="dateFilterText">📋 全部日期</span>
+                            <span>▼</span>
+                        </button>
+                        <div class="mini-calendar" id="miniCalendar">
+                            <div class="mini-calendar-header">
+                                <button class="mini-calendar-nav-btn" onclick="miniPrevMonth()">←</button>
+                                <span class="mini-calendar-month" id="miniCalendarMonth"></span>
+                                <button class="mini-calendar-nav-btn" onclick="miniNextMonth()">→</button>
+                            </div>
+                            <div class="mini-calendar-grid" id="miniCalendarGrid"></div>
+                            <div class="mini-calendar-actions">
+                                <button class="mini-calendar-action-btn all-dates" onclick="selectAllDates()">📋 全部日期</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="todo-list" id="todoList">
+                    <div class="loading" style="text-align: center; padding: 40px;">
+                        <div style="width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px;"></div>
+                        <div>加载中...</div>
+                    </div>
+                </div>
+                
+                <!-- 月度总结 -->
+                <div class="month-summary" id="monthSummary">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;">
+                        <h3 class="section-title" style="font-size: 16px; margin-bottom: 0;"><span>📊</span> 月度总结</h3>
+                        <button class="generate-summary-btn" onclick="generateMonthlySummary()">✨ 生成总结</button>
+                    </div>
+                    <div id="summaryContent" class="summary-content">
+                        <div class="empty-state" style="padding: 30px 20px;">
+                            <div class="empty-icon" style="font-size: 40px;">📝</div>
+                            <div class="empty-text">点击生成总结按钮，让AI帮你分析本月待办</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyB5dpwsYz_qYaXcgrPb7jcJT25ZO94x_9s",
+            authDomain: "idggy8865641.firebaseapp.com",
+            projectId: "idggy8865641",
+            storageBucket: "idggy8865641.firebasestorage.app",
+            messagingSenderId: "365155201238",
+            appId: "1:365155201238:web:2a0832e5f23cdb9f721977",
+            measurementId: "G-V771B2NF9K"
+        };
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let todos = [];
+        let currentMonth = new Date();
+        let selectedPerson = 'person1';
+        let selectedPriority = 'normal';
+        let selectedDateForAdd = new Date().toISOString().split('T')[0];
+        let unsubscribeTodos = null;
+        
+        let timedRangeSelecting = false;
+        let timedRangeStart = null;
+        let timedRangeEnd = null;
+        
+        let miniCalendarMonth = new Date();
+        let filterDate = 'all';
+        
+        let currentView = 'month';
+        
+        let soundEnabled = false;
+        let musicEnabled = false;
+        let audioContext = null;
+        let musicAudio = null;
+        let reminderCheckInterval = null;
+        let notificationPermission = 'default';
+
+        const personNames = {
+            person1: '高',
+            person2: '郑'
+        };
+
+        // 农历数据
+        const lunarInfo = [0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+            0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+            0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+            0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+            0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+            0x06ca0,0x0b550,0x15355,0x04da0,0x0a5d0,0x14573,0x052d0,0x0a9a8,0x0e950,0x06aa0,
+            0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+            0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b5a0,0x195a6,
+            0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+            0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+            0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+            0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+            0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+            0x05aa0,0x076a3,0x096d0,0x04bd7,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+            0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0];
+
+        const Gan = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+        const Zhi = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+        const Animals = ["鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+        const lunarMonth = ["正","二","三","四","五","六","七","八","九","十","冬","腊"];
+        const lunarDate = ["初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
+            "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十","廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"];
+
+        // 节假日数据
+        const festivals = {
+            '01-01': '元旦',
+            '02-14': '情人节',
+            '03-08': '妇女节',
+            '05-01': '劳动节',
+            '06-01': '儿童节',
+            '10-01': '国庆',
+            '12-25': '圣诞'
+        };
+
+        const lunarFestivals = {
+            '01-01': '春节',
+            '01-15': '元宵',
+            '05-05': '端午',
+            '08-15': '中秋',
+            '09-09': '重阳',
+            '12-08': '腊八',
+            '12-23': '小年'
+        };
+
+        function lYearDays(y) {
+            let i, sum = 348;
+            for(i=0x8000; i>0x8; i>>=1) {
+                sum += (lunarInfo[y-1900] & i)? 1: 0;
+            }
+            return(sum+leapDays(y));
+        }
+
+        function leapDays(y) {
+            if(leapMonth(y))  {
+                return((lunarInfo[y-1900] & 0x10000)? 30: 29);
+            } else {
+                return(0);
+            }
+        }
+
+        function leapMonth(y) {
+            return(lunarInfo[y-1900] & 0xf);
+        }
+
+        function monthDays(y, m) {
+            return( (lunarInfo[y-1900] & (0x10000>>m))? 30: 29 );
+        }
+
+        function getLunarDate(date) {
+            let i, leap=0, temp=0;
+            let baseYear = 1900;
+            let baseMonth = 1;
+            let baseDay = 31;
+            let baseDate = new Date(baseYear,0,baseDay);
+            let objDate = date;
+            let offset = Math.floor((objDate - baseDate) / 86400000);
+            let daysInYear;
+
+            for(i=baseYear; i<2101 && offset>0; i++){
+                daysInYear = lYearDays(i);
+                offset -= daysInYear;
+            }
+            if(offset<0){
+                offset += daysInYear;
+                i--;
+            }
+
+            let year = i;
+            leap = leapMonth(i);
+            let isLeap = false;
+
+            for(i=1; i<13 && offset>0; i++){
+                if(leap>0 && i==(leap+1) && isLeap==false){
+                    --i;
+                    isLeap = true;
+                    temp = leapDays(year);
+                } else {
+                    temp = monthDays(year,i);
+                }
+
+                if(isLeap==true && i==(leap+1)) isLeap = false;
+                offset -= temp;
+            }
+            if(offset==0 && leap>0 && i==leap+1) {
+                if(isLeap){
+                    isLeap = false;
+                } else {
+                    isLeap = true;
+                    --i;
+                }
+            }
+            if(offset<0){
+                offset += temp;
+                --i;
+            }
+
+            let month = i;
+            let day = offset + 1;
+            return {year: year, month: month, day: day, isLeap: isLeap};
+        }
+
+        function getFestival(date) {
+            const dateStr = date.toISOString().slice(5,10);
+            if(festivals[dateStr]) return festivals[dateStr];
+            
+            const lunar = getLunarDate(date);
+            const lunarDateStr = `${String(lunar.month).padStart(2,'0')}-${String(lunar.day).padStart(2,'0')}`;
+            if(lunarFestivals[lunarDateStr]) return lunarFestivals[lunarDateStr];
+            
+            return null;
+        }
+
+        function initTimeSelectors() {
+            let timeOptions = '';
+            for (let hour = 0; hour < 24; hour++) {
+                const timeStr = `${String(hour).padStart(2, '0')}:00`;
+                timeOptions += `<option value="${timeStr}">${timeStr}</option>`;
+            }
+            
+            const timeSelect = document.getElementById('timeSelect');
+            timeSelect.innerHTML = timeOptions;
+            timeSelect.value = '00:00';
+            
+            const startTimeSelect = document.getElementById('startTimeSelect');
+            startTimeSelect.innerHTML = timeOptions;
+            startTimeSelect.value = '09:00';
+            
+            const endTimeSelect = document.getElementById('endTimeSelect');
+            endTimeSelect.innerHTML = timeOptions;
+            endTimeSelect.value = '18:00';
+        }
+
+        function toggleView(view) {
+            currentView = view;
+            
+            document.getElementById('monthViewBtn').classList.toggle('active', view === 'month');
+            document.getElementById('yearViewBtn').classList.toggle('active', view === 'year');
+            
+            if (view === 'month') {
+                renderCalendar();
+            } else {
+                renderYearCalendar();
+            }
+        }
+
+        function renderYearCalendar() {
+            const year = currentMonth.getFullYear();
+            document.getElementById('calendarMonth').textContent = `${year}年`;
+            
+            let html = '';
+            for (let month = 0; month < 12; month++) {
+                html += `<div style="background: #f8fafc; border-radius: 12px; padding: 12px;">`;
+                html += `<div style="text-align: center; font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px;">${month + 1}月</div>`;
+                html += `<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;">`;
+                
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const startDay = firstDay.getDay();
+                const totalDays = lastDay.getDate();
+                
+                for (let i = 0; i < startDay; i++) {
+                    html += `<div></div>`;
+                }
+                
+                for (let day = 1; day <= totalDays; day++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isToday = dateStr === new Date().toISOString().split('T')[0];
+                    
+                    let dayClass = 'mini-calendar-day';
+                    if (isToday) dayClass += ' today';
+                    
+                    html += `<div class="${dayClass}" onclick="selectDateFromYear('${dateStr}')">${day}</div>`;
+                }
+                
+                html += `</div></div>`;
+            }
+            
+            document.getElementById('calendarGrid').innerHTML = html;
+        }
+
+        function selectDateFromYear(dateStr) {
+            selectedDateForAdd = dateStr;
+            currentMonth = new Date(dateStr);
+            currentView = 'month';
+            document.getElementById('monthViewBtn').classList.add('active');
+            document.getElementById('yearViewBtn').classList.remove('active');
+            updateSelectedDateDisplay();
+            renderCalendar();
+        }
+
+        async function generateMonthlySummary() {
+            const summaryContent = document.getElementById('summaryContent');
+            summaryContent.innerHTML = `
+                <div style="text-align: center; padding: 30px 20px;">
+                    <div style="width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px;"></div>
+                    <div style="font-weight: 600; color: var(--text-secondary);">AI 正在分析中...</div>
+                </div>
+            `;
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const monthStart = new Date(year, month, 1);
+            const monthEnd = new Date(year, month + 1, 0);
+            
+            const monthTodos = todos.filter(todo => {
+                const todoDate = new Date(todo.date);
+                return todoDate >= monthStart && todoDate <= monthEnd;
+            });
+            
+            const completedCount = monthTodos.filter(t => t.completed).length;
+            const pendingCount = monthTodos.filter(t => !t.completed).length;
+            const completionRate = monthTodos.length > 0 ? Math.round((completedCount / monthTodos.length) * 100) : 0;
+            
+            summaryContent.innerHTML = `
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${completedCount}</div>
+                        <div class="summary-stat-label">已完成</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${pendingCount}</div>
+                        <div class="summary-stat-label">未完成</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${completionRate}%</div>
+                        <div class="summary-stat-label">完成率</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>🎉</span> 做得好的地方
+                    </div>
+                    <div style="background: #f8fafc; border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.8; color: var(--text-primary);">
+                        • 本月完成率表现不错，继续保持！
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>💪</span> 需要提高的地方
+                    </div>
+                    <div style="background: #f8fafc; border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.8; color: var(--text-primary);">
+                        • 建议每天固定时间回顾待办事项
+                    </div>
+                </div>
+            `;
+        }
+
+        function init() {
+            updateDateDisplay();
+            
+            if (selectedPerson === 'person1') {
+                document.documentElement.style.setProperty('--primary', '#3b82f6');
+                document.documentElement.style.setProperty('--primary-light', '#74b9ff');
+                document.documentElement.style.setProperty('--primary-dark', '#1d4ed8');
+                
+                document.documentElement.style.setProperty('--priority-normal', '#94a3b8');
+                document.documentElement.style.setProperty('--priority-normal-bg', 'rgba(148, 163, 184, 0.15)');
+                document.documentElement.style.setProperty('--priority-timed', '#60a5fa');
+                document.documentElement.style.setProperty('--priority-timed-bg', 'rgba(96, 165, 250, 0.15)');
+                document.documentElement.style.setProperty('--priority-important', '#3b82f6');
+                document.documentElement.style.setProperty('--priority-important-bg', 'rgba(59, 130, 246, 0.15)');
+                document.documentElement.style.setProperty('--priority-urgent', '#2563eb');
+                document.documentElement.style.setProperty('--priority-urgent-bg', 'rgba(37, 99, 235, 0.2)');
+            }
+            
+            document.getElementById('addDateGroup').style.display = 'flex';
+            document.getElementById('dateRangeGroup').style.display = 'none';
+            
+            renderCalendar();
+            updateSelectedDateDisplay();
+            initTimeSelectors();
+            renderMiniCalendar();
+            
+            document.querySelector('.add-form').classList.add('person1');
+
+            document.addEventListener('click', function(e) {
+                const container = document.querySelector('.date-filter-container');
+                if (!container.contains(e.target)) {
+                    document.getElementById('miniCalendar').classList.remove('show');
+                }
+            });
+
+            listenToTodos();
+            initReminders();
+            initAudio();
+        }
+
+        async function initReminders() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                try {
+                    notificationPermission = await Notification.requestPermission();
+                } catch (error) {
+                    console.log('Notification permission denied');
+                }
+            } else if ('Notification' in window) {
+                notificationPermission = Notification.permission;
+            }
+            
+            reminderCheckInterval = setInterval(checkReminders, 30000);
+            checkReminders();
+        }
+
+        function checkReminders() {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            todos.forEach(todo => {
+                if (todo.completed) return;
+                
+                let shouldRemind = false;
+                
+                if (todo.date === todayStr && todo.time) {
+                    const [hour] = todo.time.split(':').map(Number);
+                    if (hour === currentHour) {
+                        shouldRemind = true;
+                    }
+                }
+                
+                if (shouldRemind && !todo.reminded) {
+                    sendReminderNotification(todo);
+                    markAsReminded(todo.id);
+                }
+            });
+        }
+
+        function sendReminderNotification(todo) {
+            if (notificationPermission !== 'granted') return;
+            
+            try {
+                const notification = new Notification(`💕 待办提醒`, {
+                    body: `${getPersonName(todo.person)}: ${todo.text}`,
+                    tag: `todo-${todo.id}`
+                });
+            } catch (error) {
+                console.log('Notification error:', error);
+            }
+        }
+
+        async function markAsReminded(todoId) {
+            try {
+                await db.collection('todos').doc(todoId).update({
+                    reminded: true
+                });
+            } catch (error) {
+                console.error('Error marking as reminded:', error);
+            }
+        }
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.log('AudioContext not supported');
+            }
+        }
+
+        function playSound() {
+            if (!soundEnabled || !audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
+            document.getElementById('soundBtn').classList.toggle('active', soundEnabled);
+            
+            if (soundEnabled && audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        function toggleMusic() {
+            musicEnabled = !musicEnabled;
+            document.getElementById('musicBtn').classList.toggle('active', musicEnabled);
+            
+            if (musicEnabled) {
+                if (!musicAudio) {
+                    musicAudio = new Audio('Velvet Lattice.wav');
+                    musicAudio.loop = true;
+                    musicAudio.volume = 0.5;
+                }
+                musicAudio.play().catch(() => {});
+            } else {
+                if (musicAudio) {
+                    musicAudio.pause();
+                }
+            }
+        }
+
+        function updateDateDisplay() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+        }
+
+        function updateSelectedDateDisplay() {
+            const date = new Date(selectedDateForAdd);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const weekday = date.toLocaleDateString('zh-CN', { weekday: 'long' });
+            document.getElementById('selectedDateDisplay').innerHTML = 
+                `<div>${date.toLocaleDateString('zh-CN', options)}</div><div style="font-size: 12px; opacity: 0.7; margin-top: 2px;">${weekday}</div>`;
+        }
+
+        function selectPerson(person) {
+            selectedPerson = person;
+            document.querySelectorAll('.person-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector(`.person-option.${person}`).classList.add('selected');
+            
+            const addForm = document.querySelector('.add-form');
+            addForm.classList.remove('person1', 'person2');
+            addForm.classList.add(person);
+            
+            if (person === 'person1') {
+                document.documentElement.style.setProperty('--primary', '#3b82f6');
+                document.documentElement.style.setProperty('--primary-light', '#74b9ff');
+                document.documentElement.style.setProperty('--primary-dark', '#1d4ed8');
+                
+                document.documentElement.style.setProperty('--priority-normal', '#94a3b8');
+                document.documentElement.style.setProperty('--priority-normal-bg', 'rgba(148, 163, 184, 0.15)');
+                document.documentElement.style.setProperty('--priority-timed', '#60a5fa');
+                document.documentElement.style.setProperty('--priority-timed-bg', 'rgba(96, 165, 250, 0.15)');
+                document.documentElement.style.setProperty('--priority-important', '#3b82f6');
+                document.documentElement.style.setProperty('--priority-important-bg', 'rgba(59, 130, 246, 0.15)');
+                document.documentElement.style.setProperty('--priority-urgent', '#2563eb');
+                document.documentElement.style.setProperty('--priority-urgent-bg', 'rgba(37, 99, 235, 0.2)');
+            } else {
+                document.documentElement.style.setProperty('--primary', '#ec4899');
+                document.documentElement.style.setProperty('--primary-light', '#f472b6');
+                document.documentElement.style.setProperty('--primary-dark', '#db2777');
+                
+                document.documentElement.style.setProperty('--priority-normal', '#fda4af');
+                document.documentElement.style.setProperty('--priority-normal-bg', 'rgba(253, 164, 175, 0.15)');
+                document.documentElement.style.setProperty('--priority-timed', '#fb7185');
+                document.documentElement.style.setProperty('--priority-timed-bg', 'rgba(251, 113, 133, 0.15)');
+                document.documentElement.style.setProperty('--priority-important', '#f43f5e');
+                document.documentElement.style.setProperty('--priority-important-bg', 'rgba(244, 63, 94, 0.15)');
+                document.documentElement.style.setProperty('--priority-urgent', '#e11d48');
+                document.documentElement.style.setProperty('--priority-urgent-bg', 'rgba(225, 29, 72, 0.2)');
+            }
+            
+            renderCalendar();
+            renderTodos();
+        }
+
+        function selectPriority(priority) {
+            selectedPriority = priority;
+            
+            timedRangeSelecting = false;
+            timedRangeStart = null;
+            timedRangeEnd = null;
+            
+            document.querySelectorAll('.priority-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector(`.priority-option.${priority}`).classList.add('selected');
+            
+            if (priority === 'timed') {
+                document.getElementById('addDateGroup').style.display = 'none';
+                document.getElementById('dateRangeGroup').style.display = 'flex';
+                updateStartDateDisplay();
+                updateEndDateDisplay();
+            } else {
+                document.getElementById('addDateGroup').style.display = 'flex';
+                document.getElementById('dateRangeGroup').style.display = 'none';
+            }
+            
+            renderCalendar();
+        }
+
+        function updateStartDateDisplay() {
+            const el = document.getElementById('startDateDisplay');
+            if (timedRangeStart) {
+                const date = new Date(timedRangeStart);
+                el.innerHTML = `<div>${date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</div><div style="font-size: 12px; opacity: 0.7;">${date.toLocaleDateString('zh-CN', { weekday: 'long' })}</div>`;
+            } else {
+                el.textContent = '第一次点击日历选择';
+            }
+        }
+
+        function updateEndDateDisplay() {
+            const el = document.getElementById('endDateDisplay');
+            if (timedRangeEnd) {
+                const date = new Date(timedRangeEnd);
+                el.innerHTML = `<div>${date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</div><div style="font-size: 12px; opacity: 0.7;">${date.toLocaleDateString('zh-CN', { weekday: 'long' })}</div>`;
+            } else {
+                el.textContent = '第二次点击日历选择';
+            }
+        }
+
+        function getPersonName(person) {
+            return personNames[person] || (person === 'person1' ? '高' : '郑');
+        }
+
+        function getPriorityLabel(priority) {
+            const labels = {
+                normal: '普通',
+                timed: '限时',
+                important: '重要',
+                urgent: '非常重要'
+            };
+            return labels[priority] || '普通';
+        }
+
+        function formatDateLabel(dateStr) {
+            if (!dateStr) return '未设置日期';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const date = new Date(dateStr);
+            date.setHours(0, 0, 0, 0);
+            
+            const diffTime = date - today;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return '今天';
+            if (diffDays === -1) return '昨天';
+            if (diffDays === 1) return '明天';
+            
+            const options = { month: 'long', day: 'numeric', weekday: 'long' };
+            return date.toLocaleDateString('zh-CN', options);
+        }
+
+        function isTodoInFilter(todo) {
+            if (filterDate === 'all') return true;
+            return todo.date === filterDate;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function listenToTodos() {
+            unsubscribeTodos = db.collection('todos')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((snapshot) => {
+                    todos = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    renderTodos();
+                    renderCalendar();
+                }, (error) => {
+                    console.error('Error listening to todos:', error);
+                    document.getElementById('todoList').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">⚠️</div>
+                            <div class="empty-text">加载失败，请检查网络</div>
+                        </div>
+                    `;
+                });
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('todoInput');
+            const timeSelect = document.getElementById('timeSelect');
+            const startTimeSelect = document.getElementById('startTimeSelect');
+            const endTimeSelect = document.getElementById('endTimeSelect');
+            const text = input.value.trim();
+
+            if (!text) {
+                alert('请输入事项内容！');
+                return;
+            }
+
+            let todoData = {
+                text: text,
+                priority: selectedPriority,
+                person: selectedPerson,
+                time: timeSelect.value,
+                completed: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (selectedPriority === 'timed') {
+                todoData.startDate = timedRangeStart || selectedDateForAdd;
+                todoData.startTime = startTimeSelect.value;
+                todoData.endDate = timedRangeEnd || selectedDateForAdd;
+                todoData.endTime = endTimeSelect.value;
+                todoData.date = timedRangeStart || selectedDateForAdd;
+            } else {
+                todoData.date = selectedDateForAdd;
+            }
+
+            try {
+                await db.collection('todos').add(todoData);
+                input.value = '';
+                
+                document.getElementById('startTimeSelect').value = '09:00';
+                document.getElementById('endTimeSelect').value = '18:00';
+                timeSelect.value = '00:00';
+                
+                timedRangeSelecting = false;
+                timedRangeStart = null;
+                timedRangeEnd = null;
+                updateStartDateDisplay();
+                updateEndDateDisplay();
+                renderCalendar();
+                
+                selectPriority('normal');
+                playSound();
+            } catch (error) {
+                console.error('Error adding todo:', error);
+                alert('添加失败，请检查网络');
+            }
+        }
+
+        async function toggleTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                try {
+                    const isCompleted = todo.completed || (todo.status && todo.status === 'complete');
+                    await db.collection('todos').doc(id).update({
+                        completed: !isCompleted
+                    });
+                    playSound();
+                } catch (error) {
+                    console.error('Error updating todo:', error);
+                    alert('更新失败，请检查网络');
+                }
+            }
+        }
+
+        async function deleteTodo(id) {
+            if (confirm('确定要删除这个事项吗？')) {
+                try {
+                    await db.collection('todos').doc(id).delete();
+                } catch (error) {
+                    console.error('Error deleting todo:', error);
+                    alert('删除失败，请检查网络');
+                }
+            }
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todoList');
+            
+            const filteredTodos = todos.filter(todo => isTodoInFilter(todo));
+            
+            if (filteredTodos.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">💑</div>
+                        <div class="empty-text">${filterDate === 'all' ? '还没有待办事项，快来一起添加吧！' : '这一天没有待办事项'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const grouped = {};
+            filteredTodos.forEach(todo => {
+                const dateKey = todo.date || 'no-date';
+                if (!grouped[dateKey]) {
+                    grouped[dateKey] = [];
+                }
+                grouped[dateKey].push(todo);
+            });
+
+            const sortedDates = Object.keys(grouped).sort((a, b) => {
+                if (a === 'no-date') return 1;
+                if (b === 'no-date') return -1;
+                return a > b ? 1 : -1;
+            });
+
+            let html = '';
+
+            sortedDates.forEach(dateKey => {
+                const dateTodos = grouped[dateKey];
+                
+                dateTodos.sort((a, b) => {
+                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                    if (a.createdAt && b.createdAt) {
+                        return a.createdAt.toMillis() > b.createdAt.toMillis() ? -1 : 1;
+                    }
+                    return 0;
+                });
+
+                html += `
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="font-size: 15px; font-weight: 700; color: var(--primary); padding: 4px 0;">
+                            ${formatDateLabel(dateKey === 'no-date' ? null : dateKey)}
+                        </div>
+                `;
+
+                dateTodos.forEach(todo => {
+                    let dateText = '';
+                    if (todo.priority === 'timed' && todo.startDate && todo.endDate) {
+                        const startDate = new Date(todo.startDate);
+                        const endDate = new Date(todo.endDate);
+                        const startDateStr = startDate.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+                        const endDateStr = endDate.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+                        
+                        dateText = `📅 ${startDateStr} ${todo.startTime || ''} ~ ${endDateStr} ${todo.endTime || ''}`;
+                    }
+                    
+                    let timeText = '';
+                    if (todo.time && todo.priority !== 'timed') {
+                        timeText = `⏰ ${todo.time}`;
+                    }
+                    
+                    const isCompleted = todo.completed || (todo.status && todo.status === 'complete');
+                    
+                    html += `
+                    <div class="todo-item ${todo.person} ${isCompleted ? 'completed' : ''}">
+                        <div class="avatar ${todo.person}">${todo.person === 'person1' ? '👦' : '👧'}</div>
+                        <div class="checkbox ${isCompleted ? 'checked' : ''}" onclick="toggleTodo('${todo.id}')"></div>
+                        <div class="todo-content">
+                            <div class="todo-text">${escapeHtml(todo.text)}</div>
+                            <div class="todo-meta">
+                                <span class="todo-person ${todo.person}">${getPersonName(todo.person)}</span>
+                                ${timeText ? `<span class="todo-date">${timeText}</span>` : ''}
+                                ${dateText ? `<span class="todo-date">${dateText}</span>` : ''}
+                                <span class="todo-priority ${todo.priority}">${getPriorityLabel(todo.priority)}</span>
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTodo('${todo.id}')">删除</button>
+                    </div>
+                    `;
+                });
+
+                html += `</div>`;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function getDateTodoInfo(dateStr) {
+            let info = null;
+            
+            for (const todo of todos) {
+                if (todo.date === dateStr || 
+                    (todo.priority === 'timed' && todo.startDate && todo.endDate && 
+                     dateStr >= todo.startDate && dateStr <= todo.endDate)) {
+                    
+                    const priorityRank = { urgent: 4, important: 3, timed: 2, normal: 1 };
+                    
+                    if (!info || priorityRank[todo.priority] > priorityRank[info.priority]) {
+                        info = {
+                            hasTodo: true,
+                            priority: todo.priority,
+                            person: todo.person
+                        };
+                    }
+                }
+            }
+            
+            return info || { hasTodo: false };
+        }
+
+        function renderCalendar() {
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            
+            document.getElementById('calendarMonth').textContent = 
+                `${year}年${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDay = firstDay.getDay();
+            const totalDays = lastDay.getDate();
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            let html = '';
+            
+            const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+            dayNames.forEach(name => {
+                html += `<div class="calendar-day-name">${name}</div>`;
+            });
+
+            for (let i = 0; i < startDay; i++) {
+                html += `<div class="calendar-day"></div>`;
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === todayStr;
+                const date = new Date(year, month, day);
+                
+                let dayClass = 'calendar-day';
+                if (isToday) dayClass += ' today';
+                
+                let todoIndicator = '';
+                let isNormalTodo = false;
+                let isTimedTodo = false;
+                let hasTimedTodo = false;
+                
+                for (const todo of todos) {
+                    if (todo.date === dateStr) {
+                        if (todo.priority === 'normal' || todo.priority === 'important' || todo.priority === 'urgent') {
+                            isNormalTodo = true;
+                            todoIndicator = todo.priority;
+                        }
+                    }
+                    if (todo.priority === 'timed' && todo.startDate && todo.endDate) {
+                        if (dateStr >= todo.startDate && dateStr <= todo.endDate) {
+                            isTimedTodo = true;
+                            hasTimedTodo = true;
+                            todoIndicator = 'timed';
+                        }
+                    }
+                }
+                
+                if (hasTimedTodo) {
+                    dayClass += ' has-timed-todo';
+                }
+                
+                let rangeStyle = '';
+                if (selectedPriority === 'timed') {
+                    if (timedRangeStart && timedRangeEnd) {
+                        if (dateStr >= timedRangeStart && dateStr <= timedRangeEnd) {
+                            dayClass += ' in-range';
+                            if (dateStr === timedRangeStart) dayClass += ' range-start';
+                            if (dateStr === timedRangeEnd) dayClass += ' range-end';
+                        }
+                    } else if (timedRangeStart && dateStr === timedRangeStart) {
+                        dayClass += ' range-start selecting';
+                    }
+                }
+                
+                const lunar = getLunarDate(date);
+                const festival = getFestival(date);
+                
+                html += `
+                    <div class="calendar-day ${dayClass}" onclick="selectDateForAdd('${dateStr}')" style="${rangeStyle}">
+                        <span class="calendar-day-number">${day}</span>
+                        ${festival ? `<span class="calendar-day-festival">${festival}</span>` : 
+                          `<span class="lunar-day">${lunarDate[lunar.day - 1]}</span>`}
+                        ${isNormalTodo ? `<div class="todo-dot" style="width: 8px; height: 8px; border-radius: 50%; background: var(--priority-${todoIndicator}); margin-top: 4px;"></div>` : ''}
+                    </div>
+                `;
+            }
+
+            document.getElementById('calendarGrid').innerHTML = html;
+        }
+
+        function selectDateForAdd(dateStr) {
+            selectedDateForAdd = dateStr;
+            updateSelectedDateDisplay();
+            
+            if (selectedPriority === 'timed') {
+                if (!timedRangeSelecting) {
+                    timedRangeStart = dateStr;
+                    timedRangeEnd = null;
+                    timedRangeSelecting = true;
+                    updateStartDateDisplay();
+                } else {
+                    if (dateStr < timedRangeStart) {
+                        timedRangeEnd = timedRangeStart;
+                        timedRangeStart = dateStr;
+                    } else {
+                        timedRangeEnd = dateStr;
+                    }
+                    timedRangeSelecting = false;
+                    updateEndDateDisplay();
+                }
+                renderCalendar();
+            }
+        }
+
+        function prevMonth() {
+            currentMonth.setMonth(currentMonth.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+            renderCalendar();
+        }
+
+        function toggleMiniCalendar() {
+            document.getElementById('miniCalendar').classList.toggle('show');
+        }
+
+        function renderMiniCalendar() {
+            const year = miniCalendarMonth.getFullYear();
+            const month = miniCalendarMonth.getMonth();
+            
+            document.getElementById('miniCalendarMonth').textContent = 
+                `${year}年${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDay = firstDay.getDay();
+            const totalDays = lastDay.getDate();
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            let html = '';
+            
+            const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+            dayNames.forEach(name => {
+                html += `<div class="mini-calendar-day-name">${name}</div>`;
+            });
+
+            for (let i = 0; i < startDay; i++) {
+                html += `<div class="mini-calendar-day"></div>`;
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === filterDate;
+                
+                let dayClass = 'mini-calendar-day';
+                if (isToday) dayClass += ' today';
+                if (isSelected) dayClass += ' selected';
+                
+                html += `
+                    <div class="mini-calendar-day ${dayClass}" onclick="selectFilterDate('${dateStr}')">
+                        ${day}
+                    </div>
+                `;
+            }
+
+            document.getElementById('miniCalendarGrid').innerHTML = html;
+        }
+
+        function selectFilterDate(dateStr) {
+            filterDate = dateStr;
+            const date = new Date(dateStr);
+            document.getElementById('dateFilterText').textContent = `📅 ${date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}`;
+            document.getElementById('miniCalendar').classList.remove('show');
+            renderTodos();
+            renderMiniCalendar();
+        }
+
+        function selectAllDates() {
+            filterDate = 'all';
+            document.getElementById('dateFilterText').textContent = '📋 全部日期';
+            document.getElementById('miniCalendar').classList.remove('show');
+            renderTodos();
+            renderMiniCalendar();
+        }
+
+        function miniPrevMonth() {
+            miniCalendarMonth.setMonth(miniCalendarMonth.getMonth() - 1);
+            renderMiniCalendar();
+        }
+
+        function miniNextMonth() {
+            miniCalendarMonth.setMonth(miniCalendarMonth.getMonth() + 1);
+            renderMiniCalendar();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
